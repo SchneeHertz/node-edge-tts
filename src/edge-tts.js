@@ -1,5 +1,5 @@
 const { randomBytes } = require('node:crypto')
-const fs = require('node:fs')
+const { writeFileSync, createWriteStream } = require('node:fs')
 const { WebSocket } = require('ws')
 const { HttpsProxyAgent } = require('https-proxy-agent')
 
@@ -78,13 +78,13 @@ class EdgeTTS {
       }
       cue.part = fullPart
     })
-    fs.writeFileSync(subPath, JSON.stringify(subFile, null, '  '), { encoding: 'utf-8' })
+    writeFileSync(subPath, JSON.stringify(subFile, null, '  '), { encoding: 'utf-8' })
   }
 
   async ttsPromise (text, audioPath) {
     const _wsConnect = await this._connectWebSocket()
     return await new Promise((resolve, reject) => {
-      let audioStream = fs.createWriteStream(audioPath)
+      let audioStream = createWriteStream(audioPath)
       let subFile = []
       _wsConnect.on('message', async (data, isBinary) => {
         if (isBinary) {
