@@ -1,6 +1,6 @@
 # node-edge-tts
 
-node-edge-tts is a module that using Microsoft Edge's online TTS (Text-to-Speech) service on the Node.js
+node-edge-tts is a module that utilizes Microsoft Edge's online TTS (Text-to-Speech) service on Node.js
 
 ## Installation
 
