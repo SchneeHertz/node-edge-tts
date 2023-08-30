@@ -1,6 +1,6 @@
 {
   "name": "node-edge-tts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "node-edge-tts is a module that using Microsoft Edge's online TTS (Text-to-Speech) service on the Node.js",
   "keywords": [
     "TTS",
