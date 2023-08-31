@@ -4,33 +4,27 @@ import { WebSocket } from 'ws'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 
 type subLine = {
-  part: string,
+  part: string
   start: number
 }
 
 type configure = {
   voice?: string
-  lang?:string
+  lang?: string
   outputFormat?: string
-  proxy?: string
   saveSubtitles?: boolean
+  proxy?: string
 }
 
 class EdgeTTS {
 
-  private voice: string
-  private lang:string
-  private outputFormat: string
+  private voice = 'zh-CN-XiaoyiNeural'
+  private lang = 'zh-CN'
+  private outputFormat = 'audio-24khz-48kbitrate-mono-mp3'
+  private saveSubtitles = false
   private proxy: string
-  private saveSubtitles: boolean
 
-  constructor ({
-    voice = 'zh-CN-XiaoyiNeural',
-    lang = 'zh-CN',
-    outputFormat = 'audio-24khz-48kbitrate-mono-mp3',
-    saveSubtitles = false,
-    proxy
-  }: configure = {}) {
+  constructor ({ voice, lang, outputFormat, saveSubtitles, proxy }: configure = {}) {
     this.voice = voice
     this.lang = lang
     this.outputFormat = outputFormat
