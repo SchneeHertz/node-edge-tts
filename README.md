@@ -28,9 +28,9 @@ await tts.ttsPromise('Hello world', path_to_audiofile_with_extension)
 const tts = new EdgeTTS({
   voice: 'en-US-AriaNeural',
   lang: 'en-US',
-  outputFormat: 'audio-24khz-96kbitrate-mono-mp3'
+  outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+  saveSubtitles: true,
   proxy: 'http://localhost:7890',
-  saveSubtitles: true
 })
 ```
 You can find the available options for speechconfig at [voice/lang](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)|[outputFormat](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech.speechsynthesisoutputformat?view=azure-dotnet), but not all options are accessible due to limitations of the services provided by Microsoft Edge.
