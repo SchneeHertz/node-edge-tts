@@ -1,16 +1,28 @@
-const { randomBytes } = require('node:crypto')
-const { writeFileSync, createWriteStream } = require('node:fs')
-const { WebSocket } = require('ws')
-const { HttpsProxyAgent } = require('https-proxy-agent')
+import { randomBytes } from 'node:crypto'
+import { writeFileSync, createWriteStream } from 'node:fs'
+import { WebSocket } from 'ws'
+import { HttpsProxyAgent } from 'https-proxy-agent'
 
+type subLine = {
+  part: string,
+  start: number
+}
+
+type configure = {
+  voice?: string
+  lang?:string
+  outputFormat?: string
+  proxy?: string
+  saveSubtitles?: boolean
+}
 
 class EdgeTTS {
 
-  voice
-  lang
-  outputFormat
-  proxy
-  saveSubtitles
+  private voice: string
+  private lang:string
+  private outputFormat: string
+  private proxy: string
+  private saveSubtitles: boolean
 
   constructor ({
     voice = 'zh-CN-XiaoyiNeural',
@@ -18,7 +30,7 @@ class EdgeTTS {
     outputFormat = 'audio-24khz-48kbitrate-mono-mp3',
     saveSubtitles = false,
     proxy
-  }) {
+  }: configure = {}) {
     this.voice = voice
     this.lang = lang
     this.outputFormat = outputFormat
@@ -26,7 +38,7 @@ class EdgeTTS {
     this.proxy = proxy
   }
 
-  async _connectWebSocket () {
+  async _connectWebSocket (): Promise<WebSocket> {
     const wsConnect = new WebSocket(`wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4`, {
       host: 'speech.platform.bing.com',
       origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
@@ -35,7 +47,7 @@ class EdgeTTS {
       },
       agent: this.proxy ? new HttpsProxyAgent(this.proxy) : undefined
     })
-    await new Promise((resolve, reject) => {
+    return new Promise((resolve: Function) => {
       wsConnect.on('open', () => {
         wsConnect.send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n
           {
@@ -52,17 +64,17 @@ class EdgeTTS {
             }
           }
         `)
-        resolve()
+        resolve(wsConnect)
       })
     })
-    return wsConnect
   }
 
-  _saveSubFile (subFile, text, audioPath) {
+
+  _saveSubFile (subFile: subLine[], text: string, audioPath: string) {
     let subPath = audioPath + '.json'
     let subChars = text.split('')
     let subCharIndex = 0
-    subFile.forEach((cue, index) => {
+    subFile.forEach((cue: subLine, index: number) => {
       let fullPart = ''
       let stepIndex = 0
       for (let sci = subCharIndex; sci < subChars.length; sci++) {
@@ -81,16 +93,16 @@ class EdgeTTS {
     writeFileSync(subPath, JSON.stringify(subFile, null, '  '), { encoding: 'utf-8' })
   }
 
-  async ttsPromise (text, audioPath) {
+  async ttsPromise (text: string, audioPath: string) {
     const _wsConnect = await this._connectWebSocket()
-    return await new Promise((resolve, reject) => {
+    return new Promise((resolve: Function) => {
       let audioStream = createWriteStream(audioPath)
-      let subFile = []
-      _wsConnect.on('message', async (data, isBinary) => {
+      let subFile:subLine[] = []
+      _wsConnect.on('message', async (data: Buffer, isBinary) => {
         if (isBinary) {
           let separator = 'Path:audio\r\n'
           let index = data.indexOf(separator) + separator.length
-          let audioData = data.slice(index)
+          let audioData = data.subarray(index)
           audioStream.write(audioData)
         } else {
           let message = data.toString()
@@ -104,7 +116,7 @@ class EdgeTTS {
             let splitTexts = message.split('\r\n')
             try {
               let metadata = JSON.parse(splitTexts[splitTexts.length - 1])
-              metadata['Metadata'].forEach(element => {
+              metadata['Metadata'].forEach((element: object) => {
                 subFile.push({ part: element['Data']['text']['Text'], start: Math.floor(element['Data']['Offset'] / 10000) })
               })
             } catch {}
@@ -122,6 +134,4 @@ class EdgeTTS {
   }
 }
 
-module.exports = {
-  EdgeTTS
-}
+export { EdgeTTS }

@@ -7,7 +7,12 @@
     "Text-to-Speech",
     "Edge"
   ],
-  "main": "index.js",
+  "main": "dist/edge-tts.js",
+  "types": "dist/edge-tts.d.ts",
+  "files": [
+    "/dist"
+  ],
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/SchneeHertz/node-edge-tts.git"
@@ -21,5 +26,9 @@
   "dependencies": {
     "https-proxy-agent": "^7.0.1",
     "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.5",
+    "typescript": "^5.2.2"
   }
 }
