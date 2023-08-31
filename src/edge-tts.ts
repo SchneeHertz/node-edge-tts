@@ -6,6 +6,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent'
 type subLine = {
   part: string
   start: number
+  end: number
 }
 
 type configure = {
@@ -117,7 +118,11 @@ class EdgeTTS {
             try {
               let metadata = JSON.parse(splitTexts[splitTexts.length - 1])
               metadata['Metadata'].forEach((element: object) => {
-                subFile.push({ part: element['Data']['text']['Text'], start: Math.floor(element['Data']['Offset'] / 10000) })
+                subFile.push({
+                  part: element['Data']['text']['Text'],
+                  start: Math.floor(element['Data']['Offset'] / 10000),
+                  end: Math.floor((element['Data']['Offset'] + element['Data']['Duration']) / 10000)
+                })
               })
             } catch {}
           }
