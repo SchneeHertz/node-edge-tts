@@ -18,13 +18,19 @@ type configure = {
 
 class EdgeTTS {
 
-  private voice = 'zh-CN-XiaoyiNeural'
-  private lang = 'zh-CN'
-  private outputFormat = 'audio-24khz-48kbitrate-mono-mp3'
-  private saveSubtitles = false
+  private voice: string
+  private lang: string
+  private outputFormat: string
+  private saveSubtitles: boolean
   private proxy: string
 
-  constructor ({ voice, lang, outputFormat, saveSubtitles, proxy }: configure = {}) {
+  constructor ({
+    voice = 'zh-CN-XiaoyiNeural',
+    lang = 'zh-CN',
+    outputFormat = 'audio-24khz-48kbitrate-mono-mp3',
+    saveSubtitles = false,
+    proxy
+  }: configure = {}) {
     this.voice = voice
     this.lang = lang
     this.outputFormat = outputFormat
