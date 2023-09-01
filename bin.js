@@ -5,21 +5,25 @@ const { hideBin } = require('yargs/helpers')
 const argv = yargs(hideBin(process.argv))
   .usage('Usage: npx node-edge-tts <text> [options]')
   .options({
-    text: { type: 'string', demandOption: true, alias: 't' }
+    text: { type: 'string', demandOption: true, alias: 't' },
+    path: { type: 'string', alias: 'p' }
+  })
+  .default({
+    path: `./output.mp3`
   })
   .argv
 
-const { text } = argv
+console.log(argv)
+const { text, path } = argv
 
 const tts = new EdgeTTS({
   lang: undefined,
   saveSubtitles: true
 })
 
-console.log(argv)
 
 ;(async () => {
-  // await tts.ttsPromise('Hello world', './example.mp3')
+  await tts.ttsPromise(text, path)
   console.log(tts)
   process.exit()
 })()
