@@ -28,5 +28,9 @@ const tts = new EdgeTTS({ voice, lang, outputFormat, saveSubtitles, proxy })
 
 ;(async () => {
   await tts.ttsPromise(text, filepath)
+  console.log(`Converted to ${filepath}`)
+  if (saveSubtitles) {
+    console.log(`Saved subtitles to ${filepath}.json`)
+  }
   process.exit()
 })()
