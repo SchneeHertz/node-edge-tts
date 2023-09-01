@@ -5,13 +5,13 @@ const { hideBin } = require('yargs/helpers')
 const argv = yargs(hideBin(process.argv))
   .usage('Usage: npx node-edge-tts [options]')
   .options({
-    text: { type: 'string', demandOption: true, alias: 't' },
-    filepath: { type: 'string', alias: 'f' },
-    voice: { type: 'string', alias: 'v' },
-    lang: { type: 'string', alias: 'l' },
-    outputFormat: { type: 'string', alias: 'o' },
-    saveSubtitles: { type: 'boolean', alias: 's' },
-    proxy: { type: 'string', alias: 'p' },
+    text: { type: 'string', demandOption: true, alias: 't', describe: 'The text to be converted to speech' },
+    filepath: { type: 'string', alias: 'f', describe: 'The output file path' },
+    voice: { type: 'string', alias: 'v', describe: 'The voice to be used' },
+    lang: { type: 'string', alias: 'l', describe: 'The language to be used' },
+    outputFormat: { type: 'string', alias: 'o', describe: 'The output format' },
+    saveSubtitles: { type: 'boolean', alias: 's', describe: 'Whether to save subtitles' },
+    proxy: { type: 'string', alias: 'p', describe: 'example: http://localhost:7890' },
   })
   .default({
     filepath: `./output.mp3`,
@@ -23,12 +23,10 @@ const argv = yargs(hideBin(process.argv))
   .example(`npx node-edge-tts -t 'Hello world' -f './output.mp3'`)
   .argv
 
-console.log(argv)
 const { text, filepath, voice, lang, outputFormat, saveSubtitles, proxy } = argv
 const tts = new EdgeTTS({ voice, lang, outputFormat, saveSubtitles, proxy })
 
 ;(async () => {
   await tts.ttsPromise(text, filepath)
-  console.log(tts)
   process.exit()
 })()
