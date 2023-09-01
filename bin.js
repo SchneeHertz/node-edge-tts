@@ -24,16 +24,11 @@ const argv = yargs(hideBin(process.argv))
   .argv
 
 console.log(argv)
-const { text, path } = argv
-
-const tts = new EdgeTTS({
-  lang: undefined,
-  saveSubtitles: true
-})
-
+const { text, filepath, voice, lang, outputFormat, saveSubtitles, proxy } = argv
+const tts = new EdgeTTS({ voice, lang, outputFormat, saveSubtitles, proxy })
 
 ;(async () => {
-  await tts.ttsPromise(text, path)
+  await tts.ttsPromise(text, filepath)
   console.log(tts)
   process.exit()
 })()
