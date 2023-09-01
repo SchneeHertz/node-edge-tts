@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/SchneeHertz/node-edge-tts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test.js"
   },
   "author": "SchneeHertz",
   "license": "MIT",
@@ -28,6 +28,9 @@
   },
   "devDependencies": {
     "@types/ws": "^8.5.5",
-    "typescript": "^5.2.2"
-  }
+    "@types/yargs": "^17.0.24",
+    "typescript": "^5.2.2",
+    "yargs": "^17.7.2"
+  },
+  "bin": "./bin.js"
 }
