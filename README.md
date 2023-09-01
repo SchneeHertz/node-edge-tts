@@ -2,13 +2,42 @@
 
 node-edge-tts is a module that utilizes Microsoft Edge's online TTS (Text-to-Speech) service on Node.js
 
+
 ## Installation
 
 ```
 npm install node-edge-tts
 ```
 
-## Example usage
+#### Or you can directly use it in the command line.
+```
+npx node-edge-tts -t 'Hello world'
+```
+
+
+## Command line usage
+```
+Usage: npx node-edge-tts [options]
+
+Options:
+      --help           Show help                                       [boolean]
+      --version        Show version number                             [boolean]
+  -t, --text           The text to be converted to speech    [string] [required]
+  -f, --filepath       The output file path   [string] [default: "./output.mp3"]
+  -v, --voice          The voice to be used
+                                        [string] [default: "zh-CN-XiaoyiNeural"]
+  -l, --lang           The language to be used       [string] [default: "zh-CN"]
+  -o, --outputFormat   The output format
+                           [string] [default: "audio-24khz-48kbitrate-mono-mp3"]
+  -s, --saveSubtitles  Whether to save subtitles      [boolean] [default: false]
+  -p, --proxy          example: http://localhost:7890                   [string]
+
+Examples:
+  npx node-edge-tts -t 'Hello world' -f './output.mp3'
+```
+
+
+## Module usage
 
 ```
 const { EdgeTTS } = require('node-edge-tts')
