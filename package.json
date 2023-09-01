@@ -10,16 +10,15 @@
   "main": "dist/edge-tts.js",
   "types": "dist/edge-tts.d.ts",
   "files": [
-    "/dist"
+    "/dist",
+    "bin.js"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/SchneeHertz/node-edge-tts.git"
   },
   "homepage": "https://github.com/SchneeHertz/node-edge-tts",
-  "scripts": {
-    "test": "node test.js"
-  },
+  "scripts": {},
   "author": "SchneeHertz",
   "license": "MIT",
   "dependencies": {
