@@ -15,7 +15,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/SchneeHertz/node-edge-tts.git"
+    "url": "git+https://github.com/SchneeHertz/node-edge-tts.git"
   },
   "homepage": "https://github.com/SchneeHertz/node-edge-tts",
   "scripts": {
@@ -33,5 +33,7 @@
     "@types/yargs": "^17.0.24",
     "typescript": "^5.2.2"
   },
-  "bin": "./bin.js"
+  "bin": {
+    "node-edge-tts": "bin.js"
+  }
 }
