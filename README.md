@@ -29,6 +29,9 @@ Options:
   -l, --lang           The language to be used       [string] [default: "zh-CN"]
   -o, --outputFormat   The output format
                            [string] [default: "audio-24khz-48kbitrate-mono-mp3"]
+      --pitch          The pitch of the voice      [string] [default: "default"]
+  -r, --rate           The rate of the voice       [string] [default: "default"]
+      --volume         The volume of the voice     [string] [default: "default"]
   -s, --saveSubtitles  Whether to save subtitles      [boolean] [default: false]
   -p, --proxy          example: http://localhost:7890                   [string]
 
@@ -60,9 +63,12 @@ const tts = new EdgeTTS({
   outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
   saveSubtitles: true,
   proxy: 'http://localhost:7890',
+  pitch: '-10%',
+  rate: '+10%',
+  volumn: '-50%'
 })
 ```
-You can find the available options for speechconfig at [voice/lang](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)|[outputFormat](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech.speechsynthesisoutputformat?view=azure-dotnet), but not all options are accessible due to limitations of the services provided by Microsoft Edge.
+You can find the available options for speechconfig at [voice/lang](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)|[outputFormat](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech.speechsynthesisoutputformat?view=azure-dotnet)|[pitch/rate/volume](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice), but not all options are accessible due to limitations of the services provided by Microsoft Edge.
 
 ### subtitles
 Subtitles are json files with the same name as the audio file, as shown below:

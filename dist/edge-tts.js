@@ -15,12 +15,15 @@ const node_fs_1 = require("node:fs");
 const ws_1 = require("ws");
 const https_proxy_agent_1 = require("https-proxy-agent");
 class EdgeTTS {
-    constructor({ voice = 'zh-CN-XiaoyiNeural', lang = 'zh-CN', outputFormat = 'audio-24khz-48kbitrate-mono-mp3', saveSubtitles = false, proxy } = {}) {
+    constructor({ voice = 'zh-CN-XiaoyiNeural', lang = 'zh-CN', outputFormat = 'audio-24khz-48kbitrate-mono-mp3', saveSubtitles = false, proxy, rate = 'default', pitch = 'default', volume = 'default' } = {}) {
         this.voice = voice;
         this.lang = lang;
         this.outputFormat = outputFormat;
         this.saveSubtitles = saveSubtitles;
         this.proxy = proxy;
+        this.rate = rate;
+        this.pitch = pitch;
+        this.volume = volume;
     }
     _connectWebSocket() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -121,7 +124,9 @@ class EdgeTTS {
                 _wsConnect.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
       ` + `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
         <voice name="${this.voice}">
-          ${text}
+          <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
+            ${text}
+          </prosody>
         </voice>
       </speak>`);
             });

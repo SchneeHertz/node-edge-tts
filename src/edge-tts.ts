@@ -15,6 +15,9 @@ type configure = {
   outputFormat?: string
   saveSubtitles?: boolean
   proxy?: string
+  rate?: string
+  pitch?: string
+  volume?: string
 }
 
 class EdgeTTS {
@@ -24,19 +27,28 @@ class EdgeTTS {
   private outputFormat: string
   private saveSubtitles: boolean
   private proxy: string
+  private rate: string
+  private pitch: string
+  private volume: string
 
   constructor ({
     voice = 'zh-CN-XiaoyiNeural',
     lang = 'zh-CN',
     outputFormat = 'audio-24khz-48kbitrate-mono-mp3',
     saveSubtitles = false,
-    proxy
+    proxy,
+    rate = 'default',
+    pitch = 'default',
+    volume = 'default'
   }: configure = {}) {
     this.voice = voice
     this.lang = lang
     this.outputFormat = outputFormat
     this.saveSubtitles = saveSubtitles
     this.proxy = proxy
+    this.rate = rate
+    this.pitch = pitch
+    this.volume = volume
   }
 
   async _connectWebSocket (): Promise<WebSocket> {
@@ -132,7 +144,9 @@ class EdgeTTS {
       _wsConnect.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
       ` + `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
         <voice name="${this.voice}">
-          ${text}
+          <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
+            ${text}
+          </prosody>
         </voice>
       </speak>`)
     })

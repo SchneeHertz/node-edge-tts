@@ -1,6 +1,6 @@
 {
   "name": "node-edge-tts",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "node-edge-tts is a module that using Microsoft Edge's online TTS (Text-to-Speech) service on the Node.js",
   "keywords": [
     "TTS",
@@ -18,7 +18,9 @@
     "url": "https://github.com/SchneeHertz/node-edge-tts.git"
   },
   "homepage": "https://github.com/SchneeHertz/node-edge-tts",
-  "scripts": {},
+  "scripts": {
+    "build": "tsc"
+  },
   "author": "SchneeHertz",
   "license": "MIT",
   "dependencies": {
