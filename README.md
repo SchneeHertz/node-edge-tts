@@ -68,7 +68,7 @@ const tts = new EdgeTTS({
   volumn: '-50%'
 })
 ```
-You can find the available options for speechconfig at [voice/lang](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)|[outputFormat](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech.speechsynthesisoutputformat?view=azure-dotnet)|[pitch/rate/volume](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice), but not all options are accessible due to limitations of the services provided by Microsoft Edge.
+You can find the available options for speechconfig at [voice/lang](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)|[outputFormat](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech.speechsynthesisoutputformat?view=azure-dotnet)|[pitch/rate/volume](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice), but not all options are available due to limitations of the services provided by Microsoft Edge.
 
 ### subtitles
 Subtitles are json files with the same name as the audio file, as shown below:
