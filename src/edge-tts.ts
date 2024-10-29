@@ -18,6 +18,7 @@ type configure = {
   rate?: string
   pitch?: string
   volume?: string
+  timeout?: number
 }
 
 class EdgeTTS {
@@ -30,6 +31,7 @@ class EdgeTTS {
   private rate: string
   private pitch: string
   private volume: string
+  private timeout: number
 
   constructor ({
     voice = 'zh-CN-XiaoyiNeural',
@@ -39,7 +41,8 @@ class EdgeTTS {
     proxy,
     rate = 'default',
     pitch = 'default',
-    volume = 'default'
+    volume = 'default',
+    timeout = 3000
   }: configure = {}) {
     this.voice = voice
     this.lang = lang
@@ -49,6 +52,7 @@ class EdgeTTS {
     this.rate = rate
     this.pitch = pitch
     this.volume = volume
+    this.timeout = timeout
   }
 
   async _connectWebSocket (): Promise<WebSocket> {
@@ -108,9 +112,10 @@ class EdgeTTS {
 
   async ttsPromise (text: string, audioPath: string) {
     const _wsConnect = await this._connectWebSocket()
-    return new Promise((resolve: Function) => {
+    return new Promise((resolve: Function, reject: Function) => {
       let audioStream = createWriteStream(audioPath)
       let subFile:subLine[] = []
+      let timeout = setTimeout(() => reject('Timed out'), this.timeout)
       _wsConnect.on('message', async (data: Buffer, isBinary) => {
         if (isBinary) {
           let separator = 'Path:audio\r\n'
@@ -124,6 +129,7 @@ class EdgeTTS {
             if (this.saveSubtitles) {
               this._saveSubFile(subFile, text, audioPath)
             }
+            clearTimeout(timeout)
             resolve()
           } else if (message.includes('Path:audio.metadata')) {
             let splitTexts = message.split('\r\n')
