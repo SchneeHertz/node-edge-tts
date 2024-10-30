@@ -42,7 +42,7 @@ class EdgeTTS {
     rate = 'default',
     pitch = 'default',
     volume = 'default',
-    timeout = 3000
+    timeout = 10000
   }: configure = {}) {
     this.voice = voice
     this.lang = lang
@@ -126,6 +126,7 @@ class EdgeTTS {
           let message = data.toString()
           if (message.includes('Path:turn.end')) {
             audioStream.end()
+            _wsConnect.close()
             if (this.saveSubtitles) {
               this._saveSubFile(subFile, text, audioPath)
             }
