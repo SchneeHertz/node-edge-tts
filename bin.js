@@ -15,6 +15,7 @@ const argv = yargs(hideBin(process.argv))
     volume: { type: 'string', describe: 'The volume of the voice'},
     saveSubtitles: { type: 'boolean', alias: 's', describe: 'Whether to save subtitles' },
     proxy: { type: 'string', alias: 'p', describe: 'example: http://localhost:7890' },
+    timeout: { type: 'number', describe: 'The timeout of the request' }
   })
   .default({
     filepath: `./output.mp3`,
@@ -24,7 +25,8 @@ const argv = yargs(hideBin(process.argv))
     pitch: 'default',
     rate: 'default',
     volume: 'default',
-    saveSubtitles: false
+    saveSubtitles: false,
+    timeout: 10000
   })
   .example(`npx node-edge-tts -t 'Hello world' -f './output.mp3'`)
   .argv

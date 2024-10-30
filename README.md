@@ -34,6 +34,7 @@ Options:
       --volume         The volume of the voice     [string] [default: "default"]
   -s, --saveSubtitles  Whether to save subtitles      [boolean] [default: false]
   -p, --proxy          example: http://localhost:7890                   [string]
+      --timeout        The timeout of the request      [number] [default: 10000]
 
 Examples:
   npx node-edge-tts -t 'Hello world' -f './output.mp3'
@@ -65,7 +66,8 @@ const tts = new EdgeTTS({
   proxy: 'http://localhost:7890',
   pitch: '-10%',
   rate: '+10%',
-  volumn: '-50%'
+  volumn: '-50%',
+  timeout: 10000
 })
 ```
 You can find the available options for speechconfig at [voice/lang](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/language-support?tabs=tts)|[outputFormat](https://learn.microsoft.com/en-us/dotnet/api/microsoft.cognitiveservices.speech.speechsynthesisoutputformat?view=azure-dotnet)|[pitch/rate/volume](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-voice), but not all options are available due to limitations of the services provided by Microsoft Edge.
