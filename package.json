@@ -19,7 +19,8 @@
   },
   "homepage": "https://github.com/SchneeHertz/node-edge-tts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "author": "SchneeHertz",
   "license": "MIT",
