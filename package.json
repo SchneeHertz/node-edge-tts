@@ -20,12 +20,14 @@
   "homepage": "https://github.com/SchneeHertz/node-edge-tts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "node test/index.js"
   },
   "author": "SchneeHertz",
   "license": "MIT",
   "dependencies": {
     "https-proxy-agent": "^7.0.1",
+    "node-fetch": "2.6.7",
     "ws": "^8.13.0",
     "yargs": "^17.7.2"
   },

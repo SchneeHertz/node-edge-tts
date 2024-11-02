@@ -1,13 +1,11 @@
 const { EdgeTTS } = require('../dist/edge-tts.js')
 const path = require('node:path')
-
-
+//proxy: 'http://localhost:7890',
 const tts = new EdgeTTS({
   voice: 'pt-BR-ThalitaNeural',
   lang: 'pt-BR',
   outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
   saveSubtitles: true,
-  proxy: 'http://localhost:7890',
   timeout: 10000
 })
 ;(async () => {

@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { writeFileSync, createWriteStream } from 'node:fs'
 import { WebSocket } from 'ws'
 import { HttpsProxyAgent } from 'https-proxy-agent'
+import fetch from 'node-fetch'
 
 type subLine = {
   part: string
@@ -19,6 +20,7 @@ type configure = {
   pitch?: string
   volume?: string
   timeout?: number
+  secApiUrl?: string
 }
 
 class EdgeTTS {
@@ -32,6 +34,7 @@ class EdgeTTS {
   private pitch: string
   private volume: string
   private timeout: number
+  private secApiUrl: string
 
   constructor ({
     voice = 'zh-CN-XiaoyiNeural',
@@ -42,7 +45,8 @@ class EdgeTTS {
     rate = 'default',
     pitch = 'default',
     volume = 'default',
-    timeout = 10000
+    timeout = 10000,
+    secApiUrl="https://edge-sec.myaitool.top/?key=edge"
   }: configure = {}) {
     this.voice = voice
     this.lang = lang
@@ -53,10 +57,13 @@ class EdgeTTS {
     this.pitch = pitch
     this.volume = volume
     this.timeout = timeout
+    this.secApiUrl = secApiUrl
   }
 
   async _connectWebSocket (): Promise<WebSocket> {
-    const wsConnect = new WebSocket(`wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4`, {
+    const res=await fetch(this.secApiUrl)
+    const result=await res.json()
+    const wsConnect = new WebSocket(`wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4&Sec-MS-GEC=${result['Sec-MS-GEC']}&Sec-MS-GEC-Version=${result['Sec-MS-GEC-Version']}`, {
       host: 'speech.platform.bing.com',
       origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
       headers: {
