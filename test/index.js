@@ -8,7 +8,7 @@ const tts = new EdgeTTS({
   outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
   saveSubtitles: true,
   proxy: 'http://localhost:7890',
-  timeout: 10000
+  timeout: 20000
 })
 ;(async () => {
   try {
@@ -21,3 +21,17 @@ const tts = new EdgeTTS({
     console.error(e)
   }
 })()
+
+// const tts = new EdgeTTS({
+//   outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+//   saveSubtitles: true,
+//   timeout: 10000
+// })
+// ;(async () => {
+//   try {
+//     await tts.ttsPromise(`​​我工作以后才发现，大家都是草台班子。政府草台，企业草台，我也草台，大家都草台，凑合赚钱过日子。一个企业，看着像一台奔驰在高速公路上的豪华轿车，里面其实是几个人蹬着自行车顶个壳。路上的车都是这样，大家谁都不戳破。`, path.join(__dirname, 'test.mp3'))
+//     console.log('end')
+//   } catch (e) {
+//     console.error(e)
+//   }
+// })()
