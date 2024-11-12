@@ -66,7 +66,7 @@ const tts = new EdgeTTS({
   proxy: 'http://localhost:7890',
   pitch: '-10%',
   rate: '+10%',
-  volumn: '-50%',
+  volume: '-50%',
   timeout: 10000
 })
 ```
