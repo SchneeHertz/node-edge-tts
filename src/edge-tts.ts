@@ -65,7 +65,7 @@ class EdgeTTS {
       },
       agent: this.proxy ? new HttpsProxyAgent(this.proxy) : undefined
     })
-    return new Promise((resolve: Function) => {
+    return new Promise((resolve: Function, reject: Function) => {
       wsConnect.on('open', () => {
         wsConnect.send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n
           {
@@ -83,6 +83,9 @@ class EdgeTTS {
           }
         `)
         resolve(wsConnect)
+      })
+      wsConnect.on('error', (err) => {
+        reject(err)
       })
     })
   }
