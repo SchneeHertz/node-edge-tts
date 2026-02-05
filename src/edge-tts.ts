@@ -4,6 +4,19 @@ import { WebSocket } from 'ws'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { generateSecMsGecToken, TRUSTED_CLIENT_TOKEN, CHROMIUM_FULL_VERSION } from './drm'
 
+function escapeXml (unsafe: string): string {
+  return unsafe.replace(/[<>&"']/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;'
+      case '>': return '&gt;'
+      case '&': return '&amp;'
+      case '"': return '&quot;'
+      case "'": return '&apos;'
+      default: return c
+    }
+  })
+}
+
 type subLine = {
   part: string
   start: number
@@ -61,7 +74,11 @@ class EdgeTTS {
       host: 'speech.platform.bing.com',
       origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0',
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache',
+        'User-Agent': `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROMIUM_FULL_VERSION.split('.')[0]}.0.0.0 Safari/537.36 Edg/${CHROMIUM_FULL_VERSION.split('.')[0]}.0.0.0`,
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Accept-Language': 'en-US,en;q=0.9'
       },
       agent: this.proxy ? new HttpsProxyAgent(this.proxy) : undefined
     })
@@ -130,12 +147,14 @@ class EdgeTTS {
           let message = data.toString()
           if (message.includes('Path:turn.end')) {
             audioStream.end()
-            _wsConnect.close()
-            if (this.saveSubtitles) {
-              this._saveSubFile(subFile, text, audioPath)
-            }
-            clearTimeout(timeout)
-            resolve()
+            audioStream.on('finish', () => {
+              _wsConnect.close()
+              if (this.saveSubtitles) {
+                this._saveSubFile(subFile, text, audioPath)
+              }
+              clearTimeout(timeout)
+              resolve()
+            })
           } else if (message.includes('Path:audio.metadata')) {
             let splitTexts = message.split('\r\n')
             try {
@@ -156,7 +175,7 @@ class EdgeTTS {
       ` + `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
         <voice name="${this.voice}">
           <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
-            ${text}
+            ${escapeXml(text)}
           </prosody>
         </voice>
       </speak>`)
