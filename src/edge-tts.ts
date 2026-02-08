@@ -181,6 +181,70 @@ class EdgeTTS {
       </speak>`)
     })
   }
+
+  /**
+   * Stream audio chunks as they arrive from Edge TTS (for SSE / real-time streaming).
+   * Yields each binary audio chunk until turn.end.
+   */
+  async * streamAudio (text: string): AsyncGenerator<Buffer> {
+    const _wsConnect = await this._connectWebSocket()
+    const queue: (Buffer | null)[] = []
+    let resolveWait: (() => void) | null = null
+    const waitNext = (): Promise<void> =>
+      new Promise((resolve) => { resolveWait = resolve })
+
+    let timeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (resolveWait) {
+        _wsConnect.close()
+        resolveWait()
+      }
+    }, this.timeout)
+
+    _wsConnect.on('message', (data: Buffer, isBinary: boolean) => {
+      if (isBinary) {
+        const separator = 'Path:audio\r\n'
+        const index = data.indexOf(separator) + separator.length
+        const audioData = data.subarray(index)
+        if (audioData.length > 0) {
+          queue.push(audioData)
+          if (resolveWait) { resolveWait(); resolveWait = null }
+        }
+      } else {
+        const message = data.toString()
+        if (message.includes('Path:turn.end')) {
+          if (timeout) { clearTimeout(timeout); timeout = null }
+          queue.push(null)
+          if (resolveWait) { resolveWait(); resolveWait = null }
+          _wsConnect.close()
+        } else if (message.includes('Path:audio.metadata') && this.saveSubtitles) {
+          // optional: could emit subtitle metadata here for stream mode
+        }
+      }
+    })
+    _wsConnect.on('error', () => {
+      queue.push(null)
+      if (resolveWait) { resolveWait(); resolveWait = null }
+    })
+
+    const requestId = randomBytes(16).toString('hex')
+    _wsConnect.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
+      ` + `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
+        <voice name="${this.voice}">
+          <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
+            ${escapeXml(text)}
+          </prosody>
+        </voice>
+      </speak>`)
+
+    while (true) {
+      while (queue.length > 0) {
+        const chunk = queue.shift()
+        if (chunk === null) return
+        yield chunk
+      }
+      await waitNext()
+    }
+  }
 }
 
 export { EdgeTTS }
