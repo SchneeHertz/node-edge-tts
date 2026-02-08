@@ -56,6 +56,24 @@ const tts = new EdgeTTS()
 await tts.ttsPromise('Hello world', path_to_audiofile_with_extension)
 ```
 
+### streamAudio (streaming / SSE)
+
+**`streamAudio(text)`** returns an async generator (`AsyncGenerator<Buffer>`) that yields each binary audio chunk as it is received from the WebSocket — no file is written; suitable for SSE or real-time streaming.
+
+- **Stream end**: when the server sends `Path:turn.end`, when `timeout` (set in the constructor) is reached, or when the WebSocket errors.
+- **Chunk format**: each chunk is a `Buffer` (the audio payload after the `Path:audio\r\n` header in the binary message).
+
+Example with `for await`:
+
+```js
+const tts = new EdgeTTS({ voice: 'en-US-AriaNeural', lang: 'en-US' })
+
+for await (const chunk of tts.streamAudio('Hello world')) {
+  // Send chunk via SSE (e.g. event speech.audio.delta) or pipe to response
+  process.stdout.write(chunk)
+}
+```
+
 ### configure
 ```
 const tts = new EdgeTTS({
