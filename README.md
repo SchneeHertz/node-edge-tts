@@ -56,6 +56,34 @@ const tts = new EdgeTTS()
 await tts.ttsPromise('Hello world', path_to_audiofile_with_extension)
 ```
 
+### streamAudio (streaming / SSE)
+
+**`streamAudio(text)`** returns an async generator (`AsyncGenerator<Buffer | subLine>`) that yields audio chunks and optional subtitle metadata as they are received from the WebSocket — no file is written; suitable for SSE or real-time streaming.
+
+- **Stream end**: when the server sends `Path:turn.end`, when `timeout` (set in the constructor) is reached, or when the WebSocket errors.
+- **Audio chunks**: a `Buffer` containing the audio payload after the `Path:audio\r\n` header in the binary message.
+- **Subtitles**: when `saveSubtitles: true`, word boundaries are yielded as `{ part: string, start: number, end: number }`, with times measured in milliseconds. Use `Buffer.isBuffer(chunk)` to distinguish audio from subtitles; do not write subtitle objects to an audio response.
+
+Example with `for await`:
+
+```js
+const tts = new EdgeTTS({
+  voice: 'en-US-AriaNeural',
+  lang: 'en-US',
+  saveSubtitles: true
+})
+
+for await (const chunk of tts.streamAudio('Hello world')) {
+  if (Buffer.isBuffer(chunk)) {
+    // Send audio via SSE (e.g. event speech.audio.delta) or pipe to response
+    process.stdout.write(chunk)
+  } else {
+    // Subtitle: { part: 'Hello', start: 100, end: 500 }
+    console.error(chunk)
+  }
+}
+```
+
 ### configure
 ```
 const tts = new EdgeTTS({

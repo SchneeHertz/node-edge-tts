@@ -23,6 +23,19 @@ type subLine = {
   end: number
 }
 
+type audioMetadata = {
+  Metadata: {
+    Type: string
+    Data: {
+      Offset: number
+      Duration: number
+      text: {
+        Text: string
+      }
+    }
+  }[]
+}
+
 type configure = {
   voice?: string
   lang?: string
@@ -41,7 +54,7 @@ class EdgeTTS {
   private lang: string
   private outputFormat: string
   private saveSubtitles: boolean
-  private proxy: string
+  private proxy?: string
   private rate: string
   private pitch: string
   private volume: string
@@ -156,14 +169,13 @@ class EdgeTTS {
               resolve()
             })
           } else if (message.includes('Path:audio.metadata')) {
-            let splitTexts = message.split('\r\n')
             try {
-              let metadata = JSON.parse(splitTexts[splitTexts.length - 1])
-              metadata['Metadata'].forEach((element: object) => {
+              const metadata: audioMetadata = JSON.parse(message.slice(message.indexOf('\r\n\r\n') + 4))
+              metadata.Metadata.forEach((element) => {
                 subFile.push({
-                  part: element['Data']['text']['Text'],
-                  start: Math.floor(element['Data']['Offset'] / 10000),
-                  end: Math.floor((element['Data']['Offset'] + element['Data']['Duration']) / 10000)
+                  part: element.Data.text.Text,
+                  start: Math.floor(element.Data.Offset / 10000),
+                  end: Math.floor((element.Data.Offset + element.Data.Duration) / 10000)
                 })
               })
             } catch {}
@@ -180,6 +192,84 @@ class EdgeTTS {
         </voice>
       </speak>`)
     })
+  }
+
+  /**
+   * Stream audio chunks as they arrive from Edge TTS (for SSE / real-time streaming).
+   * Yields binary audio chunks and, when saveSubtitles is enabled, word-boundary
+   * subtitles with start/end times in milliseconds until turn.end.
+   */
+  async * streamAudio (text: string): AsyncGenerator<Buffer | subLine> {
+    const _wsConnect = await this._connectWebSocket()
+    const queue: (Buffer | subLine | null)[] = []
+    let resolveWait: (() => void) | null = null
+    const waitNext = (): Promise<void> =>
+      new Promise((resolve) => { resolveWait = resolve })
+
+    let timeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      if (resolveWait) {
+        _wsConnect.close()
+        resolveWait()
+      }
+    }, this.timeout)
+
+    _wsConnect.on('message', (data: Buffer, isBinary: boolean) => {
+      if (isBinary) {
+        const separator = 'Path:audio\r\n'
+        const index = data.indexOf(separator) + separator.length
+        const audioData = data.subarray(index)
+        if (audioData.length > 0) {
+          queue.push(audioData)
+          if (resolveWait) { resolveWait(); resolveWait = null }
+        }
+      } else {
+        const message = data.toString()
+        if (message.includes('Path:turn.end')) {
+          if (timeout) { clearTimeout(timeout); timeout = null }
+          queue.push(null)
+          if (resolveWait) { resolveWait(); resolveWait = null }
+          _wsConnect.close()
+        } else if (message.includes('Path:audio.metadata') && this.saveSubtitles) {
+          try {
+            const metadata: audioMetadata = JSON.parse(message.slice(message.indexOf('\r\n\r\n') + 4))
+            metadata.Metadata.forEach((element) => {
+              if (element.Type === 'WordBoundary') {
+                queue.push({
+                  part: element.Data.text.Text,
+                  start: Math.floor(element.Data.Offset / 10000),
+                  end: Math.floor((element.Data.Offset + element.Data.Duration) / 10000)
+                })
+              }
+            })
+            if (resolveWait) { resolveWait(); resolveWait = null }
+          } catch {}
+        }
+      }
+    })
+    _wsConnect.on('error', () => {
+      queue.push(null)
+      if (resolveWait) { resolveWait(); resolveWait = null }
+    })
+
+    const requestId = randomBytes(16).toString('hex')
+    _wsConnect.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
+      ` + `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
+        <voice name="${this.voice}">
+          <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
+            ${escapeXml(text)}
+          </prosody>
+        </voice>
+      </speak>`)
+
+    while (true) {
+      const chunk = queue.shift()
+      if (chunk === null) return
+      if (chunk === undefined) {
+        await waitNext()
+      } else {
+        yield chunk
+      }
+    }
   }
 }
 
