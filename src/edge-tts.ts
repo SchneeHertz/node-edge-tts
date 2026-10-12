@@ -70,8 +70,7 @@ class EdgeTTS {
   }
 
   async _connectWebSocket (): Promise<WebSocket> {
-    const wsConnect = new WebSocket(`wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGecToken()}&Sec-MS-GEC-Version=1-${CHROMIUM_FULL_VERSION}`, {
-      host: 'speech.platform.bing.com',
+    const wsConnect = new WebSocket(`wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGecToken()}&Sec-MS-GEC-Version=1-${CHROMIUM_FULL_VERSION}`, {
       origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
       headers: {
         'Pragma': 'no-cache',
