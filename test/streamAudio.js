@@ -6,7 +6,7 @@ const tts = new EdgeTTS({
   outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
   saveSubtitles: true,
   timeout: 10000,
-  proxy: 'http://localhost:7890',
+  // proxy: 'http://localhost:7890',
 })
 const app = express()
 const subtitleStreams = new Map()

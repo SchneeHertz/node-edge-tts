@@ -25,7 +25,7 @@ const path = require('node:path')
 const tts = new EdgeTTS({
   outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
   saveSubtitles: true,
-  proxy: 'http://localhost:7890',
+  // proxy: 'http://localhost:7890',
   timeout: 10000
 })
 ;(async () => {
