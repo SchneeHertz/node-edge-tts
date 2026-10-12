@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <title>流式语音与字幕示例</title>
+</head>
+<body>
+    <textarea id="textInput" style="width: 600px;" rows="5">我工作以后才发现，大家都是草台班子。政府草台，企业草台，我也草台，大家都草台，凑合赚钱过日子。一个企业，看着像一台奔驰在高速公路上的豪华轿车，里面其实是几个人蹬着自行车顶个壳。路上的车都是这样，大家谁都不戳破。</textarea>
+    <button onclick="playTTS()">播放</button>
+
+    <p>字幕会随播放进度累加显示，并同步输出到浏览器控制台。</p>
+    <audio id="audioPlayer" controls autoplay></audio>
+    <p id="subtitle" aria-live="polite" style="min-height: 1.5em; font-size: 1.25rem; white-space: pre-wrap;"></p>
+    <p id="status" role="status"></p>
+
+    <script>
+        const audio = document.getElementById('audioPlayer')
+        const subtitleOutput = document.getElementById('subtitle')
+        const statusOutput = document.getElementById('status')
+        const subtitleTrack = audio.addTextTrack('subtitles', '字幕', 'zh')
+        subtitleTrack.mode = 'hidden'
+        let subtitleStream = null
+
+        // 按顺序匹配原文，将词后的标点和空白一起加入字幕。
+        function createSubtitleTextRestorer(text) {
+            let cursor = 0
+            return part => {
+                if (cursor === null) return part
+                const start = text.indexOf(part, cursor)
+                if (start === -1) {
+                    // 服务改写了文字时停止匹配，避免后续字幕重复带出原文。
+                    cursor = null
+                    return part
+                }
+                const wordEnd = start + part.length
+                const trailing = text.slice(wordEnd).match(/^[\p{P}\s]*/u)[0]
+                const end = wordEnd + trailing.length
+                const restored = text.slice(cursor, end)
+                cursor = end
+                return restored
+            }
+        }
+
+        // 按播放位置重新计算累积字幕，跳转或重播时不会重复追加。
+        function updateSubtitles() {
+            subtitleOutput.textContent = Array.from(subtitleTrack.cues || [])
+                .filter(cue => cue.startTime <= audio.currentTime)
+                .map(cue => cue.text)
+                .join('')
+        }
+
+        // 隐藏的文本轨道仍会按音频播放时间触发 cuechange，支持暂停和跳转。
+        subtitleTrack.addEventListener('cuechange', () => {
+            updateSubtitles()
+            const cue = subtitleTrack.activeCues?.[0]
+            if (cue) {
+                console.log('字幕', {
+                    part: cue.text,
+                    start: Math.round(cue.startTime * 1000),
+                    end: Math.round(cue.endTime * 1000)
+                })
+            }
+        })
+
+        audio.addEventListener('play', () => {
+            statusOutput.textContent = '播放中'
+        })
+        audio.addEventListener('pause', () => {
+            if (!audio.ended) statusOutput.textContent = '已暂停'
+        })
+        audio.addEventListener('seeked', updateSubtitles)
+        audio.addEventListener('ended', () => {
+            updateSubtitles()
+            statusOutput.textContent = '播放结束'
+        })
+        audio.addEventListener('error', () => {
+            subtitleStream?.close()
+            statusOutput.textContent = '音频播放失败，请查看服务端日志'
+        })
+
+        function playTTS() {
+            const text = document.getElementById('textInput').value
+            if (!text.trim()) {
+                statusOutput.textContent = '请输入文字'
+                return
+            }
+
+            subtitleStream?.close()
+            audio.pause()
+            audio.removeAttribute('src')
+            audio.load()
+            for (const cue of Array.from(subtitleTrack.cues || [])) {
+                subtitleTrack.removeCue(cue)
+            }
+            subtitleOutput.textContent = ''
+            statusOutput.textContent = '正在连接'
+
+            const restoreSubtitleText = createSubtitleTextRestorer(text)
+            const params = new URLSearchParams({ id: crypto.randomUUID(), text })
+            const source = new EventSource(`/api/tts-subtitles?id=${params.get('id')}`)
+            subtitleStream = source
+
+            // 先建立字幕通道，再启动音频请求，避免丢失最初的字幕。
+            source.addEventListener('ready', () => {
+                audio.src = `/api/tts-stream?${params}`
+                audio.play().catch(error => {
+                    if (subtitleStream !== source) return
+                    console.error(error)
+                    statusOutput.textContent = '无法自动播放，请点击播放器的播放按钮'
+                })
+            }, { once: true })
+
+            source.addEventListener('subtitle', event => {
+                const { part, start, end } = JSON.parse(event.data)
+                subtitleTrack.addCue(new VTTCue(start / 1000, end / 1000, restoreSubtitleText(part)))
+                updateSubtitles()
+            })
+
+            // 合成完成不等于播放结束：关闭 SSE，但保留字幕轨道供后续播放。
+            source.addEventListener('done', () => {
+                source.close()
+            })
+            source.addEventListener('tts-error', event => {
+                source.close()
+                audio.pause()
+                statusOutput.textContent = JSON.parse(event.data).message
+            })
+            source.onerror = () => {
+                source.close()
+                statusOutput.textContent = '字幕连接中断，请重新播放'
+            }
+        }
+
+        window.addEventListener('pagehide', () => subtitleStream?.close())
+    </script>
+</body>
+</html>
