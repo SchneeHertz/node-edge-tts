@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { writeFileSync, createWriteStream } from 'node:fs'
 import { WebSocket } from 'ws'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { generateSecMsGecToken, TRUSTED_CLIENT_TOKEN, CHROMIUM_FULL_VERSION } from './drm'
+import { generateSecMsGecToken, TRUSTED_CLIENT_TOKEN, CHROMIUM_FULL_VERSION, SEC_MS_GEC_VERSION } from './drm'
 
 function escapeXml (unsafe: string): string {
   return unsafe.replace(/[<>&"']/g, (c) => {
@@ -83,7 +83,8 @@ class EdgeTTS {
   }
 
   async _connectWebSocket (): Promise<WebSocket> {
-    const wsConnect = new WebSocket(`wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGecToken()}&Sec-MS-GEC-Version=1-${CHROMIUM_FULL_VERSION}`, {
+    const wsConnect = new WebSocket(`wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGecToken()}&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}`, {
+      host: 'speech.platform.bing.com',
       origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
       headers: {
         'Pragma': 'no-cache',
