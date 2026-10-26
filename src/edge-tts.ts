@@ -1,8 +1,9 @@
 import { randomBytes } from 'node:crypto'
-import { writeFileSync, createWriteStream } from 'node:fs'
+import { writeFileSync } from 'node:fs'
+import { open } from 'node:fs/promises'
 import { WebSocket } from 'ws'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { generateSecMsGecToken, TRUSTED_CLIENT_TOKEN, CHROMIUM_FULL_VERSION, SEC_MS_GEC_VERSION } from './drm'
+import { generateSecMsGecToken_V2, TRUSTED_CLIENT_TOKEN, CHROMIUM_FULL_VERSION, SEC_MS_GEC_VERSION_V2 } from './drm'
 
 function escapeXml (unsafe: string): string {
   return unsafe.replace(/[<>&"']/g, (c) => {
@@ -83,7 +84,7 @@ class EdgeTTS {
   }
 
   async _connectWebSocket (): Promise<WebSocket> {
-    const wsConnect = new WebSocket(`wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGecToken()}&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION}`, {
+    const wsConnect = new WebSocket(`wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${TRUSTED_CLIENT_TOKEN}&Sec-MS-GEC=${generateSecMsGecToken_V2()}&Sec-MS-GEC-Version=${SEC_MS_GEC_VERSION_V2}`, {
       host: 'speech.platform.bing.com',
       origin: 'chrome-extension://jdiccldimpdaibmpdkjnbmckianbfold',
       headers: {
@@ -95,31 +96,31 @@ class EdgeTTS {
       },
       agent: this.proxy ? new HttpsProxyAgent(this.proxy) : undefined
     })
-    return new Promise((resolve: Function, reject: Function) => {
-      wsConnect.on('open', () => {
-        wsConnect.send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n
-          {
-            "context": {
-              "synthesis": {
-                "audio": {
-                  "metadataoptions": {
-                    "sentenceBoundaryEnabled": "false",
-                    "wordBoundaryEnabled": "true"
-                  },
-                  "outputFormat": "${this.outputFormat}"
-                }
-              }
-            }
-          }
-        `)
+    return new Promise<WebSocket>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Timed out while connecting to Edge TTS'))
+        wsConnect.terminate()
+      }, this.timeout)
+      const onOpen = () => {
+        clearTimeout(timeout)
         resolve(wsConnect)
-      })
-      wsConnect.on('error', (err) => {
-        reject(err)
-      })
+      }
+      // Keep the error listener until close to handle errors during termination.
+      const onError = (error: Error) => {
+        clearTimeout(timeout)
+        reject(error)
+      }
+      const onClose = () => {
+        clearTimeout(timeout)
+        wsConnect.off('open', onOpen)
+        wsConnect.off('error', onError)
+        reject(new Error('WebSocket closed before the connection was established'))
+      }
+      wsConnect.once('open', onOpen)
+      wsConnect.on('error', onError)
+      wsConnect.once('close', onClose)
     })
   }
-
 
   _saveSubFile (subFile: subLine[], text: string, audioPath: string) {
     let subPath = audioPath + '.json'
@@ -144,91 +145,81 @@ class EdgeTTS {
     writeFileSync(subPath, JSON.stringify(subFile, null, '  '), { encoding: 'utf-8' })
   }
 
-  async ttsPromise (text: string, audioPath: string) {
-    const _wsConnect = await this._connectWebSocket()
-    return new Promise((resolve: Function, reject: Function) => {
-      let audioStream = createWriteStream(audioPath)
-      let subFile:subLine[] = []
-      let timeout = setTimeout(() => reject('Timed out'), this.timeout)
-      _wsConnect.on('message', async (data: Buffer, isBinary) => {
-        if (isBinary) {
-          let separator = 'Path:audio\r\n'
-          let index = data.indexOf(separator) + separator.length
-          let audioData = data.subarray(index)
-          audioStream.write(audioData)
+  async ttsPromise (text: string, audioPath: string): Promise<void> {
+    const audioFile = await open(audioPath, 'w')
+    const subtitles: subLine[] = []
+    try {
+      for await (const chunk of this.streamAudio(text)) {
+        if (Buffer.isBuffer(chunk)) {
+          await audioFile.writeFile(chunk)
         } else {
-          let message = data.toString()
-          if (message.includes('Path:turn.end')) {
-            audioStream.end()
-            audioStream.on('finish', () => {
-              _wsConnect.close()
-              if (this.saveSubtitles) {
-                this._saveSubFile(subFile, text, audioPath)
-              }
-              clearTimeout(timeout)
-              resolve()
-            })
-          } else if (message.includes('Path:audio.metadata')) {
-            try {
-              const metadata: audioMetadata = JSON.parse(message.slice(message.indexOf('\r\n\r\n') + 4))
-              metadata.Metadata.forEach((element) => {
-                subFile.push({
-                  part: element.Data.text.Text,
-                  start: Math.floor(element.Data.Offset / 10000),
-                  end: Math.floor((element.Data.Offset + element.Data.Duration) / 10000)
-                })
-              })
-            } catch {}
-          }
+          subtitles.push(chunk)
         }
-      })
-      let requestId = randomBytes(16).toString('hex')
-      _wsConnect.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
-      ` + `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
-        <voice name="${this.voice}">
-          <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
-            ${escapeXml(text)}
-          </prosody>
-        </voice>
-      </speak>`)
-    })
+      }
+      if (this.saveSubtitles) {
+        this._saveSubFile(subtitles, text, audioPath)
+      }
+    } finally {
+      await audioFile.close()
+    }
   }
 
   /**
-   * Stream audio chunks as they arrive from Edge TTS (for SSE / real-time streaming).
-   * Yields binary audio chunks and, when saveSubtitles is enabled, word-boundary
-   * subtitles with start/end times in milliseconds until turn.end.
+   * Stream audio and optional word boundaries until turn.end.
+   * The timeout includes the handshake. Errors reject the pending iteration;
+   * stopping consumption early terminates the connection.
    */
   async * streamAudio (text: string): AsyncGenerator<Buffer | subLine> {
-    const _wsConnect = await this._connectWebSocket()
-    const queue: (Buffer | subLine | null)[] = []
-    let resolveWait: (() => void) | null = null
-    const waitNext = (): Promise<void> =>
-      new Promise((resolve) => { resolveWait = resolve })
+    const started = Date.now()
+    const wsConnect = await this._connectWebSocket()
+    const queue: (Buffer | subLine)[] = []
+    let done = false
+    let failure: Error | undefined
+    let resolveWait: (() => void) | undefined
 
-    let timeout: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-      if (resolveWait) {
-        _wsConnect.close()
-        resolveWait()
-      }
-    }, this.timeout)
-
-    _wsConnect.on('message', (data: Buffer, isBinary: boolean) => {
+    const wake = () => {
+      const resolve = resolveWait
+      resolveWait = undefined
+      if (resolve) resolve()
+    }
+    const cleanup = () => {
+      clearTimeout(timeout)
+      wsConnect.off('message', onMessage)
+      wsConnect.off('error', onError)
+      wsConnect.off('close', onClose)
+    }
+    const finish = (error?: Error) => {
+      if (done) return
+      done = true
+      failure = error
+      cleanup()
+      wake()
+      if (error) wsConnect.terminate()
+      else wsConnect.close()
+    }
+    const onError = (error: Error) => finish(error)
+    const onClose = (code: number) =>
+      finish(new Error(`WebSocket closed before turn.end (code ${code})`))
+    const onMessage = (data: Buffer, isBinary: boolean) => {
       if (isBinary) {
-        const separator = 'Path:audio\r\n'
-        const index = data.indexOf(separator) + separator.length
-        const audioData = data.subarray(index)
+        if (data.length < 2) {
+          finish(new Error('Invalid audio frame header'))
+          return
+        }
+        const payloadOffset = data.readUInt16BE(0) + 2
+        if (payloadOffset > data.length) {
+          finish(new Error('Invalid audio frame header length'))
+          return
+        }
+        const audioData = data.subarray(payloadOffset)
         if (audioData.length > 0) {
           queue.push(audioData)
-          if (resolveWait) { resolveWait(); resolveWait = null }
+          wake()
         }
       } else {
         const message = data.toString()
         if (message.includes('Path:turn.end')) {
-          if (timeout) { clearTimeout(timeout); timeout = null }
-          queue.push(null)
-          if (resolveWait) { resolveWait(); resolveWait = null }
-          _wsConnect.close()
+          finish()
         } else if (message.includes('Path:audio.metadata') && this.saveSubtitles) {
           try {
             const metadata: audioMetadata = JSON.parse(message.slice(message.indexOf('\r\n\r\n') + 4))
@@ -241,33 +232,64 @@ class EdgeTTS {
                 })
               }
             })
-            if (resolveWait) { resolveWait(); resolveWait = null }
-          } catch {}
+            wake()
+          } catch (error) {
+            finish(error)
+          }
         }
       }
-    })
-    _wsConnect.on('error', () => {
-      queue.push(null)
-      if (resolveWait) { resolveWait(); resolveWait = null }
-    })
+    }
+    const timeout = setTimeout(
+      () => finish(new Error('Timed out waiting for Edge TTS')),
+      Math.max(0, this.timeout - (Date.now() - started))
+    )
 
-    const requestId = randomBytes(16).toString('hex')
-    _wsConnect.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n
-      ` + `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
-        <voice name="${this.voice}">
-          <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
-            ${escapeXml(text)}
-          </prosody>
-        </voice>
-      </speak>`)
+    wsConnect.on('message', onMessage)
+    wsConnect.on('error', onError)
+    wsConnect.on('close', onClose)
+    try {
+      if (wsConnect.readyState !== WebSocket.OPEN) {
+        throw new Error('WebSocket closed before synthesis started')
+      }
+      wsConnect.send(`Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n` + JSON.stringify({
+        context: {
+          synthesis: {
+            audio: {
+              metadataoptions: {
+                sentenceBoundaryEnabled: 'false',
+                wordBoundaryEnabled: 'true'
+              },
+              outputFormat: this.outputFormat
+            }
+          }
+        }
+      }))
+      const requestId = randomBytes(16).toString('hex')
+      wsConnect.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nPath:ssml\r\n\r\n` +
+        `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${this.lang}">
+          <voice name="${this.voice}">
+            <prosody rate="${this.rate}" pitch="${this.pitch}" volume="${this.volume}">
+              ${escapeXml(text)}
+            </prosody>
+          </voice>
+        </speak>`)
 
-    while (true) {
-      const chunk = queue.shift()
-      if (chunk === null) return
-      if (chunk === undefined) {
-        await waitNext()
-      } else {
-        yield chunk
+      while (true) {
+        if (failure) throw failure
+        const chunk = queue.shift()
+        if (chunk !== undefined) {
+          yield chunk
+        } else if (done) {
+          return
+        } else {
+          await new Promise<void>((resolve) => { resolveWait = resolve })
+        }
+      }
+    } finally {
+      cleanup()
+      if (!done) {
+        done = true
+        wsConnect.terminate()
       }
     }
   }

@@ -31,8 +31,8 @@ const argv = yargs(hideBin(process.argv))
   .example(`npx node-edge-tts -t 'Hello world' -f './output.mp3'`)
   .argv
 
-const { text, filepath, voice, lang, outputFormat, pitch, rate, volume, saveSubtitles, proxy } = argv
-const tts = new EdgeTTS({ voice, lang, outputFormat, pitch, rate, volume, saveSubtitles, proxy })
+const { text, filepath, voice, lang, outputFormat, pitch, rate, volume, saveSubtitles, proxy, timeout } = argv
+const tts = new EdgeTTS({ voice, lang, outputFormat, pitch, rate, volume, saveSubtitles, proxy, timeout })
 
 ;(async () => {
   await tts.ttsPromise(text, filepath)
@@ -40,5 +40,7 @@ const tts = new EdgeTTS({ voice, lang, outputFormat, pitch, rate, volume, saveSu
   if (saveSubtitles) {
     console.log(`Saved subtitles to ${filepath}.json`)
   }
-  process.exit()
-})()
+})().catch(error => {
+  console.error(error.message)
+  process.exitCode = 1
+})

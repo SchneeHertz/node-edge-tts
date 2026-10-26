@@ -2,6 +2,8 @@
 
 node-edge-tts is a module that utilizes Microsoft Edge's online TTS (Text-to-Speech) service on Node.js
 
+Connections use Sec-MS-GEC v2 (CS64-SHA256) authentication.
+
 
 ## Installation
 
@@ -41,6 +43,15 @@ Examples:
 ```
 
 
+## Development
+
+Build the TypeScript sources before running the regression tests. Tests use Node.js's built-in test runner and do not call the online service.
+
+```sh
+npm run build
+npm test
+```
+
 ## Module usage
 
 ```
@@ -60,8 +71,10 @@ await tts.ttsPromise('Hello world', path_to_audiofile_with_extension)
 
 **`streamAudio(text)`** returns an async generator (`AsyncGenerator<Buffer | subLine>`) that yields audio chunks and optional subtitle metadata as they are received from the WebSocket — no file is written; suitable for SSE or real-time streaming.
 
-- **Stream end**: when the server sends `Path:turn.end`, when `timeout` (set in the constructor) is reached, or when the WebSocket errors.
-- **Audio chunks**: a `Buffer` containing the audio payload after the `Path:audio\r\n` header in the binary message.
+- **Stream end**: when the server sends `Path:turn.end`. Timeouts, WebSocket errors, and connections closed before `turn.end` throw an `Error` to the consumer.
+- **Timeout**: `timeout` is the total time allowed for connecting and synthesizing, in milliseconds.
+- **Cancellation**: leaving the `for await` loop early (for example, with `break`) terminates the WebSocket and clears its timer.
+- **Audio chunks**: a `Buffer` containing the audio payload after the binary message's length-prefixed header.
 - **Subtitles**: when `saveSubtitles: true`, word boundaries are yielded as `{ part: string, start: number, end: number }`, with times measured in milliseconds. Use `Buffer.isBuffer(chunk)` to distinguish audio from subtitles; do not write subtitle objects to an audio response.
 
 Example with `for await`:
